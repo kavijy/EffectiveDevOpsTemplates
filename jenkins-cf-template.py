@@ -1,3 +1,5 @@
+
+#!/usr/bin/env python
 """Generating CloudFormation template."""
 from ipaddress import ip_network
 
@@ -12,8 +14,8 @@ from troposphere import (
     Parameter,
     Ref,
     Template,
-
 )
+
 from troposphere.iam import (
     InstanceProfile,
     PolicyType as IAMPolicy,
@@ -30,19 +32,17 @@ from awacs.aws import (
 
 from awacs.sts import AssumeRole
 
-
 ApplicationName = "jenkins"
 ApplicationPort = "8080"
 
 GithubAccount = "kavijy"
 GithubAnsibleURL = "https://github.com/{}/ansible".format(GithubAccount)
 
-
 AnsiblePullCmd = \
-        "/usr/local/bin/ansible-pull -U {} {}.yml -i localhost".format( 
-        GithubAnsibleURL, 
-        ApplicationName 
-    ) 
+    "/usr/local/bin/ansible-pull -U {} {}.yml -i localhost".format(
+        GithubAnsibleURL,
+        ApplicationName
+    )
 
 PublicCidrIp = str(ip_network(get_ip()))
 
@@ -65,7 +65,7 @@ t.add_resource(ec2.SecurityGroup(
             IpProtocol="tcp",
             FromPort="22",
             ToPort="22",
-            CidrIp="publicCiderIp",
+            CidrIp=PublicCidrIp,
         ),
         ec2.SecurityGroupRule(
             IpProtocol="tcp",
@@ -100,6 +100,20 @@ t.add_resource(Role(
 t.add_resource(InstanceProfile(
     "InstanceProfile",
     Path="/",
+    Roles=[Ref("Role")]
+))
+
+t.add_resource(IAMPolicy(
+    "Policy",
+    PolicyName="AllowS3",
+    PolicyDocument=Policy(
+        Statement=[
+            Statement(
+                Effect=Allow,
+                Action=[Action("s3", "*")],
+                Resource=["*"])
+        ]
+    ),
     Roles=[Ref("Role")]
 ))
 
