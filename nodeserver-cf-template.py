@@ -189,14 +189,21 @@ t.add_resource(InstanceProfile(
     Roles=[Ref("Role")]
 ))
 
+
 t.add_resource(IAMPolicy(
-    "Policy",
-    PolicyName="AllowS3",
+    "MonitoringPolicy",
+    PolicyName="AllowSendingDataForMonitoring",
     PolicyDocument=Policy(
         Statement=[
             Statement(
                 Effect=Allow,
-                Action=[Action("s3", "*")],
+                Action=[
+                    Action("cloudwatch", "Put*"),
+                    Action("logs", "Create*"),
+                    Action("logs", "Put*"),
+                    Action("logs", "Describe*"),
+                    Action("events", "Put*"),
+                ],
                 Resource=["*"])
         ]
     ),
