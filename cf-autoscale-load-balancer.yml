@@ -1,0 +1,86 @@
+AWSTEmplateFormatVersion: '2-10-09-09'
+Description: 'Cloudformation template for creating ELB/ASG'
+Parameter: 
+  SSLCertificatename:
+    Description:  elb ssl cert name
+    Type: String
+  EnvirontmentName:
+    Description: env Name
+    Type: String
+    AllowedValues: ["dev", "qa", "prod"]
+  VpcId:
+    Description: Vpc to deploy the stack info
+    Type: AWS::EC2::VPC::Id
+  Subnets:
+    Description: Subnets for the asg
+    Type: List<AWS::EC2::Subnet::Id>
+    ConstraintDescription:  for HA provide at least two subnets associated with different AZs
+  ELBSecurityGroups:
+    Description: elb ssl cert name
+    Type: String
+  HealthCheckTarget:
+    Description: health check endpoint
+    Type:  String
+  Role:
+    Description: App Role
+    Type: String
+  BuildDateTime:
+    Description: Build date time
+    Type: String
+Resources:
+  AppLoadBalancer:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
+      Scheme:  internal 
+      SecurityGroups:  !Ref 'ELBSecurityGroups'
+      Subnets: !Ref 'Subnets'
+      Type: application
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+#      Certificates: # Requires Certificate
+#        - Certificates: !Join ['', ['arn:aws:iam::', !Ref 'AWS:AccountId', ":server-certificate/", !Ref 'sslCertificateName' ]]
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: AppTargetGroup
+      LoadBalancerArn:
+        Ref: AppLoadBalancer
+      Port: '443'
+      Protocol: HTTPS
+  AppTargetGroup:
+    Type: AWS:ElasticLoadBalancingV2:TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: !Ref 'HealthCheckTarget'
+      HealthCheckProtocol: HTTPS
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3
+      UnHealthyThresholdCount: 3
+      Matcher:
+        HttpCode: '200'
+#      Port: 443
+      Port: 80
+#      Protocol: HTTPS
+      Protocol: HTTP
+      TargetGroupAttributes:
+      - Key: deregistgration_delay.timeout_seconds
+        Value: '60'
+    VpcId:
+      Ref: VpcId
+Outputs:
+  AlbDnsName:
+    Description: alb url
+    Value: !GetAtt [ AppLoadBalancer, DNSName]
+  AppLoadBalancerArn:
+    Description: alb arn
+    Value: !Ref 'AppLoadBalancer'
+  AppTargetGroupArn:
+    Description: Application LB Target Group ARN
+    Value: !Ref 'AppTargetGroup'
+  AppTargetGroupName:
+    Description: Application LB Target Group Name
+    Value: !GetATT [AppTargetGroup, TargetGroupName]
